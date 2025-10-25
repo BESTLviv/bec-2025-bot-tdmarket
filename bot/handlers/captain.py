@@ -90,7 +90,7 @@ async def process_password(message: types.Message, state: FSMContext):
         pdf_file = FSInputFile("Інструкція Капітана.pdf")
 
         await message.answer(f"✅ Вхід успішний! Вітаємо, командире {team_name}!", reply_markup=captain_menu_kb)
-        await message.answer_document(pdf_file, caption="Інструкція для капітанів.")
+       
     else:
         await message.answer(f"Неправильний пароль. Спробуйте ще раз: ")
         

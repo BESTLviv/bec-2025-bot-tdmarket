@@ -10,6 +10,7 @@ from bot.keyboards.choices import captain_menu_kb
 from bot.utils.td_dg import orders_collection, teams_collection, products_collection
 from bot.keyboards.choices import get_helpdesk_menu_kb
 from bot.utils.sheetslogger import log_action
+from datetime import datetime
 
 router = Router()
 
@@ -149,6 +150,7 @@ async def show_active_orders(callback: types.CallbackQuery):
         return await callback.answer()
 
     await callback.message.answer(f"📝 **Активні замовлення (всього: {len(active_orders)}):**")
+    await callback.message.answer("---", reply_markup=get_helpdesk_menu_kb()) # Повертаємо головне меню в кінці
     
     for order in active_orders:
         status_emoji = "🕙 В очікуванні" if order['status'] == 'new' else "✅ Готово до видачі"
@@ -300,6 +302,10 @@ async def complete_order_manual(callback: types.CallbackQuery, bot: Bot):
         team_name=updated_order['team_name'], 
         details=f"Order #{updated_order['order_number']}"
     )
+    await show_active_orders(callback)
+
+    # 6. Відповідаємо на сам callback, щоб прибрати "годинник" на кнопці
+    await callback.answer()
 
 @router.message(RejectOrder.waiting_for_reason)
 async def process_rejection_reason(message: types.Message, state: FSMContext, bot: Bot):
