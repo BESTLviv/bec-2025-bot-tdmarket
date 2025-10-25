@@ -167,7 +167,7 @@ async def show_active_orders(callback: types.CallbackQuery):
 
         await callback.message.answer(order_text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[buttons]), parse_mode="Markdown")
         
-    # await callback.message.answer("---", reply_markup=get_helpdesk_menu_kb()) # Повертаємо головне меню в кінці
+    await callback.message.answer("---", reply_markup=get_helpdesk_menu_kb()) # Повертаємо головне меню в кінці
     await callback.answer()
 
 # --- ДІЇ З ЗАМОВЛЕННЯМИ ---
