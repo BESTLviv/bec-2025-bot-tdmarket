@@ -29,7 +29,8 @@ async def captain_login_start(message: types.Message, state: FSMContext):
     await state.set_state(CaptainLogin.team_name)
     await message.answer("Введіть назву команди:", reply_markup=ReplyKeyboardRemove())
 
-INITIAL_BUDGET = 1500
+INITIAL_BUDGET = 120
+
 @router.message(CaptainLogin.team_name)
 async def process_team_name(message: types.Message, state: FSMContext):
     """
