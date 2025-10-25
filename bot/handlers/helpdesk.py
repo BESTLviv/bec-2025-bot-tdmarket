@@ -57,6 +57,11 @@ async def update_active_orders_view(message: types.Message):
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[buttons])
         await message.answer(order_text, reply_markup=keyboard, parse_mode="Markdown")
+        
+    await message.answer(
+        "--- \nМеню HelpDesk:",
+        reply_markup=get_helpdesk_menu_kb()
+    )
 
 @router.callback_query(F.data == "get_helpdesk_menu_kb")
 async def back_to_main_menu(callback: types.CallbackQuery):
