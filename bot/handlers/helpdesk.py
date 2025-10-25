@@ -10,7 +10,7 @@ from bot.keyboards.choices import captain_menu_kb
 from bot.utils.td_dg import orders_collection, teams_collection, products_collection
 from bot.keyboards.choices import get_helpdesk_menu_kb
 from bot.utils.sheetslogger import log_action
-from datetime import datetime
+import datetime
 
 router = Router()
 
@@ -275,15 +275,15 @@ async def process_rejection_reason(message: types.Message, state: FSMContext, bo
 # Переконайтеся, що на початку вашого файлу є цей імпорт
 from bot.keyboards.choices import captain_menu_kb
 
-# 3. Ручне підтвердження видачі (📦 Видано) active_orders
+# 3. Ручне підтвердження видачі (📦 Видано)
 # 3. Ручне підтвердження видачі (📦 Видано)
 @router.callback_query(F.data.startswith("hd_complete_"))
 async def complete_order_manual(callback: types.CallbackQuery, bot: Bot):
     order_id = ObjectId(callback.data.split("_")[-1])
     
     # --- ВИПРАВЛЕННЯ ТУТ ---
-    # Прибираємо зайвий .datetime
-    current_time_utc = datetime.now(datetime.timezone.utc)
+    # Тепер ми використовуємо повний шлях до класів
+    current_time_utc = datetime.datetime.now(datetime.timezone.utc)
     
     updated_order = await orders_collection.find_one_and_update(
         {"_id": order_id, "status": "approved"},
@@ -294,7 +294,7 @@ async def complete_order_manual(callback: types.CallbackQuery, bot: Bot):
         return await callback.answer("Замовлення має бути у статусі 'Готово'.", show_alert=True)
     
     # --- І ТУТ ТАКОЖ ---
-    timestamp = datetime.now().strftime('%H:%M:%S')
+    timestamp = datetime.datetime.now().strftime('%H:%M:%S')
     
     # Спочатку видаляємо старе повідомлення з кнопкою
     await callback.message.delete()
@@ -302,7 +302,7 @@ async def complete_order_manual(callback: types.CallbackQuery, bot: Bot):
     # Потім відправляємо підтвердження і головне меню
     await callback.message.answer(
         f"✅ Замовлення №{updated_order['order_number']} успішно видано о {timestamp}.",
-        reply_markup=get_helpdesk_menu_kb()
+        # reply_markup=get_helpdesk_menu_kb() # Прибираємо меню тут, бо воно буде в show_active_orders
     )
     
     captain_id = updated_order['captain_telegram_id']
@@ -325,8 +325,7 @@ async def complete_order_manual(callback: types.CallbackQuery, bot: Bot):
         details=f"Order #{updated_order['order_number']}"
     )
 
-    # Викликаємо оновлення списку замовлень, але вже для нового повідомлення
-    # Це потрібно, щоб уникнути конфліктів після видалення старого
+    # Викликаємо оновлення списку замовлень
     await show_active_orders(callback)
 
     # Відповідаємо на сам callback, щоб прибрати "годинник" на кнопці
