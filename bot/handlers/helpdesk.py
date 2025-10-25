@@ -142,23 +142,32 @@ async def show_active_orders(callback: types.CallbackQuery):
     ).sort("created_at", 1).to_list(length=20)
     
     # Видаляємо попереднє повідомлення (головне меню), щоб уникнути накопичення
-    try: await callback.message.delete()
-    except Exception: pass
+    try: 
+        await callback.message.delete()
+    except Exception: 
+        pass
     
     if not active_orders:
         await callback.message.answer("✅ Активних замовлень немає.", reply_markup=get_helpdesk_menu_kb())
         return await callback.answer()
 
     await callback.message.answer(f"📝 **Активні замовлення (всього: {len(active_orders)}):**")
-    await callback.message.answer("---", reply_markup=get_helpdesk_menu_kb()) # Повертаємо головне меню в кінці
     
     for order in active_orders:
         status_emoji = "🕙 В очікуванні" if order['status'] == 'new' else "✅ Готово до видачі"
+
+        # --- ВИПРАВЛЕННЯ ТУТ ---
+        # Екрануємо потенційно небезпечні символи в назві команди та товарів
+        team_name_safe = str(order.get('team_name', 'Без імені')).replace('_', '\\_').replace('*', '\\*').replace('`', '\\`')
+        
         order_text = (f"**Замовлення №{order['order_number']}** ({status_emoji})\n"
-                      f"Команда: **{order['team_name']}**\n"
+                      f"Команда: **{team_name_safe}**\n"
                       f"Сума: {order['total_cost']} купонів\nСклад:\n")
+        
         for item in order['items']:
-            order_text += f"- {item['product_name']} x{item['quantity']} шт.\n"
+            product_name_safe = str(item.get('product_name', 'Без назви')).replace('_', '\\_').replace('*', '\\*').replace('`', '\\`')
+            order_text += f"- {product_name_safe} x{item['quantity']} шт.\n"
+        # --- КІНЕЦЬ ВИПРАВЛЕННЯ ---
         
         buttons = []
         if order['status'] == 'new':
@@ -167,11 +176,15 @@ async def show_active_orders(callback: types.CallbackQuery):
         if order['status'] == 'approved':
              buttons.append(InlineKeyboardButton(text="📦 Видано", callback_data=f"hd_complete_{order['_id']}"))
 
-        await callback.message.answer(order_text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[buttons]), parse_mode="Markdown")
-        
-    await callback.message.answer("---", reply_markup=get_helpdesk_menu_kb()) # Повертаємо головне меню в кінці
-    await callback.answer()
+        # Перевіряємо, чи є хоч одна кнопка, перш ніж створювати клавіатуру
+        if buttons:
+            await callback.message.answer(order_text, reply_markup=InlineKeyboardMarkup(inline_keyboard=[buttons]), parse_mode="Markdown")
+        else:
+            await callback.message.answer(order_text, parse_mode="Markdown")
 
+    # Повертаємо головне меню в кінці один раз
+    await callback.message.answer("--- \nОберіть дію:", reply_markup=get_helpdesk_menu_kb()) 
+    await callback.answer()
 # --- ДІЇ З ЗАМОВЛЕННЯМИ ---
 
 # 1. Замовлення готове до видачі (✅ Готово)
@@ -262,7 +275,7 @@ async def process_rejection_reason(message: types.Message, state: FSMContext, bo
 # Переконайтеся, що на початку вашого файлу є цей імпорт
 from bot.keyboards.choices import captain_menu_kb
 
-# 3. Ручне підтвердження видачі (📦 Видано)
+# 3. Ручне підтвердження видачі (📦 Видано) active_orders
 @router.callback_query(F.data.startswith("hd_complete_"))
 async def complete_order_manual(callback: types.CallbackQuery, bot: Bot):
     order_id = ObjectId(callback.data.split("_")[-1])
