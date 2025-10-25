@@ -187,7 +187,7 @@ async def view_cart(callback: types.CallbackQuery, state: FSMContext):
     
     for product_id_str, quantity in cart.items():
         product = await products_collection.find_one({"_id": ObjectId(product_id_str)})
-        item_total = product['price_coupons'] * quantity
+        item_total = int(product['price_coupons']) * quantity
         total_cost += item_total
         cart_text += f"🔹 {product['name']} - {quantity} шт. x {product['price_coupons']} = {item_total} купонів\n"
 
@@ -236,8 +236,9 @@ async def place_order(callback: types.CallbackQuery, state: FSMContext, bot: Bot
             await callback.message.edit_text(f"❌ Помилка: '{product['name']}' недостатньо на складі.")
             return await state.update_data(cart={})
             
-        total_cost += product['price_coupons'] * quantity
-        items_for_order.append({"product_id": product_id, "product_name": product['name'], "quantity": quantity, "price_per_item": product['price_coupons']})
+        price_per_item = int(product['price_coupons']) # Перетворюємо на число
+        total_cost += price_per_item * quantity
+        items_for_order.append({"product_id": product_id, "product_name": product['name'], "quantity": quantity, "price_per_item": price_per_item})
 
     if total_cost > user['budget']:
         return await callback.message.edit_text(f"❌ Помилка: недостатньо купонів. Ваш баланс: {user['budget']}, потрібно: {total_cost}.")
@@ -254,7 +255,7 @@ async def place_order(callback: types.CallbackQuery, state: FSMContext, bot: Bot
         for item in items_for_order:
             await products_collection.update_one({"_id": item['product_id']}, {"$inc": {"stock_quantity": -item['quantity']}})
         await teams_collection.update_many({"team_name": team_name}, {"$inc": {"budget": -total_cost}})
-        
+        # total_cost можна додати, якщо потрібно зберігати історію цін
         try:
             helpdesk_chat_id = await teams_collection.find({"role": "helpdesk"}).distinct("telegram_id")
             if helpdesk_chat_id:
