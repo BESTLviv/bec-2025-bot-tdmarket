@@ -1,4 +1,3 @@
-import datetime
 from aiogram import Router, types, F, Bot
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -51,11 +50,31 @@ async def update_active_orders_view(message: types.Message):
         if order['status'] == 'new':
             buttons.append(InlineKeyboardButton(text="✅ Готово", callback_data=f"hd_approve_{order['_id']}"))
             buttons.append(InlineKeyboardButton(text="❌ Відхилити", callback_data=f"hd_reject_{order['_id']}"))
+            buttons.append(InlineKeyboardButton(text="Головне меню", callback_data=f"get_helpdesk_menu_kb"))
         if order['status'] == 'approved':
-             buttons.append(InlineKeyboardButton(text="📦 Видано", callback_data=f"hd_complete_{order['_id']}"))
+            buttons.append(InlineKeyboardButton(text="📦 Видано", callback_data=f"hd_complete_{order['_id']}"))
+            buttons.append(InlineKeyboardButton(text="Головне меню", callback_data=f"get_helpdesk_menu_kb"))
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[buttons])
         await message.answer(order_text, reply_markup=keyboard, parse_mode="Markdown")
+
+@router.callback_query(F.data == "get_helpdesk_menu_kb")
+async def back_to_main_menu(callback: types.CallbackQuery):
+    """
+    Цей обробник повертає користувача до головного меню HelpDesk.
+    """
+    # Видаляємо поточне повідомлення, щоб уникнути накопичення
+    try:
+        await callback.message.delete()
+    except Exception as e:
+        print(f"Помилка видалення повідомлення: {e}") # На випадок, якщо повідомлення вже було видалено
+
+    # Відправляємо нове повідомлення з головним меню
+    await callback.message.answer(
+        "Ви повернулися в головне меню. Оберіть дію:",
+        reply_markup=get_helpdesk_menu_kb()
+    )
+    await callback.answer()
 
 @router.message(F.text == "HelpDesk")
 async def cmd_helpdesk_start(message: types.Message, state: FSMContext):
@@ -330,7 +349,7 @@ async def show_change_team_budget(callback: types.CallbackQuery):
     if not teams:
         await callback.message.edit_text("❌ Не знайдено жодної команди.")
         return
-
+        
     builder = InlineKeyboardBuilder()
     for team in teams:
         team_name = team.get('team_name', 'Без імені')
