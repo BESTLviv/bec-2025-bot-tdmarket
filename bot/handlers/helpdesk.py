@@ -276,24 +276,34 @@ async def process_rejection_reason(message: types.Message, state: FSMContext, bo
 from bot.keyboards.choices import captain_menu_kb
 
 # 3. Ручне підтвердження видачі (📦 Видано) active_orders
+# 3. Ручне підтвердження видачі (📦 Видано)
 @router.callback_query(F.data.startswith("hd_complete_"))
 async def complete_order_manual(callback: types.CallbackQuery, bot: Bot):
     order_id = ObjectId(callback.data.split("_")[-1])
+    
+    # --- ВИПРАВЛЕННЯ ТУТ ---
+    # Прибираємо зайвий .datetime
+    current_time_utc = datetime.now(datetime.timezone.utc)
+    
     updated_order = await orders_collection.find_one_and_update(
         {"_id": order_id, "status": "approved"},
-        {"$set": {"status": "completed", "completed_at": datetime.datetime.now(datetime.timezone.utc)}},
+        {"$set": {"status": "completed", "completed_at": current_time_utc}},
         return_document=True
     )
     if not updated_order: 
         return await callback.answer("Замовлення має бути у статусі 'Готово'.", show_alert=True)
     
-    timestamp = datetime.datetime.now().strftime('%H:%M:%S')
-    # await callback.answer(f"Замовлення №{updated_order['order_number']} видано о {timestamp}.", show_alert=True)
+    # --- І ТУТ ТАКОЖ ---
+    timestamp = datetime.now().strftime('%H:%M:%S')
+    
+    # Спочатку видаляємо старе повідомлення з кнопкою
+    await callback.message.delete()
+    
+    # Потім відправляємо підтвердження і головне меню
     await callback.message.answer(
         f"✅ Замовлення №{updated_order['order_number']} успішно видано о {timestamp}.",
         reply_markup=get_helpdesk_menu_kb()
     )
-    await callback.message.delete()
     
     captain_id = updated_order['captain_telegram_id']
     text = f"📦 Ваше замовлення №{updated_order['order_number']} було видано та закрито HelpDesk."
@@ -307,7 +317,6 @@ async def complete_order_manual(callback: types.CallbackQuery, bot: Bot):
     except Exception as e: 
         print(f"Помилка сповіщення капітана: {e}")
         
-    await update_active_orders_view(callback.message) # Припускаю, що ця функція оновлює список для HelpDesk
     await log_action(
         action="Order Completed (Manual)", 
         user_id=callback.from_user.id, 
@@ -315,11 +324,14 @@ async def complete_order_manual(callback: types.CallbackQuery, bot: Bot):
         team_name=updated_order['team_name'], 
         details=f"Order #{updated_order['order_number']}"
     )
+
+    # Викликаємо оновлення списку замовлень, але вже для нового повідомлення
+    # Це потрібно, щоб уникнути конфліктів після видалення старого
     await show_active_orders(callback)
 
-    # 6. Відповідаємо на сам callback, щоб прибрати "годинник" на кнопці
+    # Відповідаємо на сам callback, щоб прибрати "годинник" на кнопці
     await callback.answer()
-
+    
 @router.message(RejectOrder.waiting_for_reason)
 async def process_rejection_reason(message: types.Message, state: FSMContext, bot: Bot):
     reason = message.text
