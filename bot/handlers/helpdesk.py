@@ -39,6 +39,11 @@ async def update_active_orders_view(message: types.Message):
 
     await message.edit_text(f"📝 **Активні замовлення (всього: {len(active_orders)}):**")
     
+    await message.answer(
+        "--- \nМеню HelpDesk:",
+        reply_markup=get_helpdesk_menu_kb()
+    )
+
     for order in active_orders:
         status_emoji = "🕙" if order['status'] == 'new' else "✅"
         order_text = (f"{status_emoji} **Замовлення №{order['order_number']}** від команди **{order['team_name']}**\n"
