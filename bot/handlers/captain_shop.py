@@ -19,6 +19,15 @@ class CaptainActions(StatesGroup):
     writing_exchange_request = State()
     writing_return_request = State()
 
+import re
+
+def escape_markdown(text: str) -> str:
+    """Екранує спеціальні символи для Telegram MarkdownV2."""
+    # Список символів, які потрібно екранувати
+    special_chars = r"[_*\[\]()~`>#\+\-=|{}.!]"
+    # Замінюємо кожен спецсимвол на його екрановану версію (з \ попереду)
+    return re.sub(f'({special_chars})', r'\\\1', text)
+
 router = Router()
 
 # --- ОСНОВНА ЗМІНА ТУТ ---
@@ -65,7 +74,9 @@ async def view_shop_page(message_or_callback, state: FSMContext, page: int, conf
     if products:
         for p in products:
             # Створюємо текстовий опис для кожного товару
-            product_details = f"🔹 **{p['name']}**\n"
+            
+            safe_name = escape_markdown(p['name'])
+            product_details = f"🔹 **{safe_name}**\n"
             info_line = f"   Ціна: {p['price_coupons']} купонів (На складі: {p['stock_quantity']} шт."
             
             # Додаємо ліміт на покупку, якщо він є
