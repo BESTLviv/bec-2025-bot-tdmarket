@@ -32,7 +32,7 @@ async def view_shop_page(message_or_callback, state: FSMContext, page: int, conf
     config = await get_shop_config()
     current_phase = config['phase']
     
-    ITEMS_PER_PAGE = 5
+    ITEMS_PER_PAGE = 8
     skip = (page - 1) * ITEMS_PER_PAGE
 
     db_filter = {"stock_quantity": {"$gt": 0}}
